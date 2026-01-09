@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model hop_diagnosistype {
+  DiagnosisTypeID      Int                    @id @default(autoincrement())
+  DiagnosisTypeName    String                 @db.VarChar(250)
+  HospitalID           Int
+  UserID               Int
+  IsActive             Boolean                @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created              DateTime               @default(now()) @db.DateTime(0)
+  Modified             DateTime               @default(now()) @db.DateTime(0)
+  hop_hospital         hop_hospital           @relation(fields: [HospitalID], references: [HospitalID], onDelete: NoAction, onUpdate: NoAction, map: "hop_diagnosistype_ibfk_1")
+  hop_user             hop_user               @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_diagnosistype_ibfk_2")
+  hop_opddiagnosistype hop_opddiagnosistype[]
+
+  @@index([HospitalID], map: "HospitalID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_doctor {
+  DoctorID       Int          @id @default(autoincrement())
+  DoctorName     String       @db.VarChar(250)
+  Specialization String?      @db.VarChar(100)
+  HospitalID     Int
+  UserID         Int
+  IsActive       Boolean      @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created        DateTime     @default(now()) @db.DateTime(0)
+  Modified       DateTime     @default(now()) @db.DateTime(0)
+  hop_hospital   hop_hospital @relation(fields: [HospitalID], references: [HospitalID], onDelete: NoAction, onUpdate: NoAction, map: "hop_doctor_ibfk_1")
+  hop_user       hop_user     @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_doctor_ibfk_2")
+  hop_opd        hop_opd[]
+
+  @@index([HospitalID], map: "HospitalID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_hospital {
+  HospitalID        Int                 @id @default(autoincrement())
+  HospitalName      String              @db.VarChar(250)
+  Address           String?             @db.VarChar(500)
+  OpeningDate       DateTime            @db.Date
+  UserID            Int
+  IsActive          Boolean             @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created           DateTime            @default(now()) @db.DateTime(0)
+  Modified          DateTime            @default(now()) @db.DateTime(0)
+  hop_diagnosistype hop_diagnosistype[]
+  hop_doctor        hop_doctor[]
+  hop_user          hop_user            @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_hospital_ibfk_1")
+  hop_patient       hop_patient[]
+  hop_treatmenttype hop_treatmenttype[]
+
+  @@index([UserID], map: "UserID")
+}
+
+model hop_opd {
+  OPDID                Int                    @id @default(autoincrement())
+  PatientID            Int
+  TreatedByDoctorID    Int
+  OPDDateTime          DateTime               @db.DateTime(0)
+  RegistrationFee      Decimal                @db.Decimal(10, 2)
+  UserID               Int
+  Created              DateTime               @default(now()) @db.DateTime(0)
+  hop_patient          hop_patient            @relation(fields: [PatientID], references: [PatientID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opd_ibfk_1")
+  hop_doctor           hop_doctor             @relation(fields: [TreatedByDoctorID], references: [DoctorID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opd_ibfk_2")
+  hop_user             hop_user               @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opd_ibfk_3")
+  hop_opddiagnosistype hop_opddiagnosistype[]
+  hop_receipt          hop_receipt[]
+
+  @@index([PatientID], map: "PatientID")
+  @@index([TreatedByDoctorID], map: "TreatedByDoctorID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_opddiagnosistype {
+  OPDDiagnosisTypeID Int               @id @default(autoincrement())
+  OPDID              Int
+  DiagnosisTypeID    Int
+  UserID             Int
+  Created            DateTime          @default(now()) @db.DateTime(0)
+  hop_opd            hop_opd           @relation(fields: [OPDID], references: [OPDID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opddiagnosistype_ibfk_1")
+  hop_diagnosistype  hop_diagnosistype @relation(fields: [DiagnosisTypeID], references: [DiagnosisTypeID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opddiagnosistype_ibfk_2")
+  hop_user           hop_user          @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_opddiagnosistype_ibfk_3")
+
+  @@unique([OPDID, DiagnosisTypeID], map: "OPDID")
+  @@index([DiagnosisTypeID], map: "DiagnosisTypeID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_patient {
+  PatientID    Int          @id @default(autoincrement())
+  PatientName  String       @db.VarChar(250)
+  MobileNo     String       @db.VarChar(20)
+  Gender       String       @db.VarChar(10)
+  DOB          DateTime?    @db.Date
+  HospitalID   Int
+  UserID       Int
+  Created      DateTime     @default(now()) @db.DateTime(0)
+  hop_opd      hop_opd[]
+  hop_hospital hop_hospital @relation(fields: [HospitalID], references: [HospitalID], onDelete: NoAction, onUpdate: NoAction, map: "hop_patient_ibfk_1")
+  hop_user     hop_user     @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_patient_ibfk_2")
+
+  @@index([HospitalID], map: "HospitalID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_receipt {
+  ReceiptID       Int               @id @default(autoincrement())
+  OPDID           Int
+  AmountPaid      Decimal           @db.Decimal(10, 2)
+  ReceiptDate     DateTime          @db.DateTime(0)
+  UserID          Int
+  Created         DateTime          @default(now()) @db.DateTime(0)
+  hop_opd         hop_opd           @relation(fields: [OPDID], references: [OPDID], onDelete: NoAction, onUpdate: NoAction, map: "hop_receipt_ibfk_1")
+  hop_user        hop_user          @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_receipt_ibfk_2")
+  hop_receipttran hop_receipttran[]
+
+  @@index([OPDID], map: "OPDID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_receipttran {
+  ReceiptTranID        Int                  @id @default(autoincrement())
+  ReceiptID            Int
+  SubTreatmentTypeID   Int
+  Quantity             Int
+  Rate                 Decimal              @db.Decimal(10, 2)
+  UserID               Int
+  Created              DateTime             @default(now()) @db.DateTime(0)
+  hop_receipt          hop_receipt          @relation(fields: [ReceiptID], references: [ReceiptID], onDelete: NoAction, onUpdate: NoAction, map: "hop_receipttran_ibfk_1")
+  hop_subtreatmenttype hop_subtreatmenttype @relation(fields: [SubTreatmentTypeID], references: [SubTreatmentTypeID], onDelete: NoAction, onUpdate: NoAction, map: "hop_receipttran_ibfk_2")
+  hop_user             hop_user             @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_receipttran_ibfk_3")
+
+  @@index([ReceiptID], map: "ReceiptID")
+  @@index([SubTreatmentTypeID], map: "SubTreatmentTypeID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_role {
+  RoleID      Int        @id @default(autoincrement())
+  RoleName    String     @unique(map: "RoleName") @db.VarChar(50)
+  Description String?    @db.VarChar(250)
+  IsActive    Boolean    @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created     DateTime   @default(now()) @db.DateTime(0)
+  hop_user    hop_user[]
+}
+
+model hop_subtreatmenttype {
+  SubTreatmentTypeID   Int               @id @default(autoincrement())
+  TreatmentTypeID      Int
+  SubTreatmentTypeName String            @db.VarChar(250)
+  Rate                 Decimal           @db.Decimal(10, 2)
+  UserID               Int
+  IsActive             Boolean           @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created              DateTime          @default(now()) @db.DateTime(0)
+  hop_receipttran      hop_receipttran[]
+  hop_treatmenttype    hop_treatmenttype @relation(fields: [TreatmentTypeID], references: [TreatmentTypeID], onDelete: NoAction, onUpdate: NoAction, map: "hop_subtreatmenttype_ibfk_1")
+  hop_user             hop_user          @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_subtreatmenttype_ibfk_2")
+
+  @@index([TreatmentTypeID], map: "TreatmentTypeID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_treatmenttype {
+  TreatmentTypeID      Int                    @id @default(autoincrement())
+  TreatmentTypeName    String                 @db.VarChar(250)
+  HospitalID           Int
+  UserID               Int
+  IsActive             Boolean                @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created              DateTime               @default(now()) @db.DateTime(0)
+  hop_subtreatmenttype hop_subtreatmenttype[]
+  hop_hospital         hop_hospital           @relation(fields: [HospitalID], references: [HospitalID], onDelete: NoAction, onUpdate: NoAction, map: "hop_treatmenttype_ibfk_1")
+  hop_user             hop_user               @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "hop_treatmenttype_ibfk_2")
+
+  @@index([HospitalID], map: "HospitalID")
+  @@index([UserID], map: "UserID")
+}
+
+model hop_user {
+  UserID               Int                    @id @default(autoincrement())
+  RoleID               Int
+  UserName             String                 @db.VarChar(100)
+  Email                String?                @db.VarChar(150)
+  MobileNo             String?                @db.VarChar(20)
+  PasswordHash         String                 @db.VarChar(255)
+  IsActive             Boolean                @default(dbgenerated("b'1'")) @db.Bit(1)
+  Created              DateTime               @default(now()) @db.DateTime(0)
+  Modified             DateTime               @default(now()) @db.DateTime(0)
+  hop_diagnosistype    hop_diagnosistype[]
+  hop_doctor           hop_doctor[]
+  hop_hospital         hop_hospital[]
+  hop_opd              hop_opd[]
+  hop_opddiagnosistype hop_opddiagnosistype[]
+  hop_patient          hop_patient[]
+  hop_receipt          hop_receipt[]
+  hop_receipttran      hop_receipttran[]
+  hop_subtreatmenttype hop_subtreatmenttype[]
+  hop_treatmenttype    hop_treatmenttype[]
+  hop_role             hop_role               @relation(fields: [RoleID], references: [RoleID], onDelete: NoAction, onUpdate: NoAction, map: "hop_user_ibfk_1")
+
+  @@index([RoleID], map: "RoleID")
+}
