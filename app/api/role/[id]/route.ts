@@ -1,174 +1,101 @@
- import { prisma } from "@/app/lib/prisma";
+import { prisma } from "@/app/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
 
-// export async function GET(req: Request) {
-//   try {
-//     const { searchParams } = new URL(req.url);
-//     const id = searchParams.get("id");
-
-//     if (!id) {
-//       return Response.json(
-//         { status: false, message: "id is required" },
-//         { status: 400 }
-//       );
-//     }
-
-//     const RoleID = Number(id);
-
-//     const role = await prisma.hop_role.findUnique({
-//       where: { RoleID },
-//     });
-
-//     return Response.json({ status: true, data: role });
-
-//   } catch (err: any) {
-//     return Response.json(
-//       { status: false, error: err.message },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-export async function GET(req: Request) {
+// GET: Fetch a single role by ID (URL Param)
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { id } = await params;
+    const RoleID = Number(id);
 
-    const RoleID = searchParams.get("RoleID");
-    const RoleName = searchParams.get("RoleName");
-    const search = searchParams.get("search");
-    const IsActive = searchParams.get("IsActive");
-    const take = Number(searchParams.get("take")) || 10;
-
-   
-    if (RoleID) {
-      const role = await prisma.hop_role.findUnique({
-        where: { RoleID: Number(RoleID) },
-      });
-      return Response.json(role);
+    if (isNaN(RoleID)) {
+      return NextResponse.json({ status: false, message: "Invalid ID" }, { status: 400 });
     }
 
-   
-    const where: any = {};
-
-    if (RoleName) {
-      where.RoleName = {
-        contains: RoleName, 
-      };
-    }
-
-    if (search) {
-      where.OR = [
-        { RoleName: { contains: search } },
-        { Description: { contains: search } },
-      ];
-    }
-
-    if (IsActive !== null) {
-      where.IsActive = IsActive === "true";
-    }
-
-    
-    const data = await prisma.hop_role.findMany({
-      where,
-      take,
-      orderBy: { RoleName: "asc" },
+    const role = await prisma.hop_role.findUnique({
+      where: { RoleID },
     });
 
-    return Response.json(data);
+    if (!role) {
+      return NextResponse.json({ status: false, message: "Role not found" }, { status: 404 });
+    }
 
+    return NextResponse.json(role);
   } catch (err: any) {
-    console.error(err);
-    return Response.json(
+    return NextResponse.json(
       { status: false, error: err.message },
       { status: 500 }
     );
   }
 }
 
-// export async function DELETE(req: Request) {
-//   try {
-//     const { searchParams } = new URL(req.url);
-//     const id = searchParams.get("id");
+// PATCH: Update Role (ID from Body)
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { RoleID, RoleName, Description, IsActive } = body;
 
-//     if (!id) {
-//       return Response.json(
-//         { status: false, message: "id is required" },
-//         { status: 400 }
-//       );
-//     }
+    if (!RoleID) {
+      return NextResponse.json(
+        { status: false, message: "RoleID is required in body" },
+        { status: 400 }
+      );
+    }
 
-//     await prisma.hop_role.update({
-//       where: { RoleID: Number(id) },
-//       data: { IsActive: false },
-//     });
+    const updatedRole = await prisma.hop_role.update({
+      where: { RoleID: Number(RoleID) },
+      data: {
+        RoleName,
+        Description,
+        IsActive,
+      },
+    });
 
-//     return Response.json({ status: true });
+    return NextResponse.json({ status: true, data: updatedRole });
 
-//   } catch (err: any) {
-//     return Response.json(
-//       { status: false, error: err.message },
-//       { status: 500 }
-//     );
-//   }
-// }
+  } catch (err: any) {
+    return NextResponse.json(
+      { status: false, error: err.message },
+      { status: 500 }
+    );
+  }
+}
 
+// PUT: Alias for PATCH (ID from Body)
+export async function PUT(req: NextRequest) {
+  return PATCH(req);
+}
 
-// /* =========================
-//    PATCH Role (Query Params)
-//    ========================= */
-// export async function PATCH(req: Request) {
-//   try {
-//     const { searchParams } = new URL(req.url);
+// DELETE: Delete Role (ID from Body)
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { RoleID } = body;
 
-//     const roleIdParam = searchParams.get("RoleID");
-//     const RoleName = searchParams.get("RoleName");
-//     const Description = searchParams.get("Description");
-//     const IsActiveParam = searchParams.get("IsActive");
+    if (!RoleID) {
+      return NextResponse.json(
+        { status: false, message: "RoleID is required in body" },
+        { status: 400 }
+      );
+    }
 
-//     if (!roleIdParam) {
-//       return Response.json(
-//         { status: false, message: "RoleID query param is required" },
-//         { status: 400 }
-//       );
-//     }
+  
 
-//     const RoleID = Number(roleIdParam);
+    await prisma.hop_role.delete({
+      where: { RoleID: Number(RoleID) }
+    });
 
-//     if (isNaN(RoleID)) {
-//       return Response.json(
-//         { status: false, message: "Invalid RoleID" },
-//         { status: 400 }
-//       );
-//     }
+    // If you prefer Hard Delete, uncomment below:
+    // await prisma.hop_role.delete({ where: { RoleID: Number(RoleID) } });
 
-//     if (
-//       RoleName === null &&
-//       Description === null &&
-//       IsActiveParam === null
-//     ) {
-//       return Response.json(
-//         { status: false, message: "No fields to update" },
-//         { status: 400 }
-//       );
-//     }
+    return NextResponse.json({ status: true, message: "Role deactivated successfully" });
 
-//     const updateData: any = {};
-
-//     if (RoleName !== null) updateData.RoleName = RoleName;
-//     if (Description !== null) updateData.Description = Description;
-//     if (IsActiveParam !== null)
-//       updateData.IsActive = IsActiveParam === "true";
-
-//     const updatedRole = await prisma.hop_role.update({
-//       where: { RoleID },
-//       data: updateData,
-//     });
-
-//     return Response.json({ status: true, data: updatedRole });
-
-//   } catch (err: any) {
-//     return Response.json(
-//       { status: false, error: err.message },
-//       { status: 500 }
-//     );
-//   }
-// }
+  } catch (err: any) {
+    return NextResponse.json(
+      { status: false, error: err.message },
+      { status: 500 }
+    );
+  }
+}
